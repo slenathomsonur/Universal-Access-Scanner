@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Access Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .scanner-types {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .scanner-type {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .scanner-section {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .history-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .history-section h2 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-badge {
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .history-time {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .scanner-area {
+            width: 100%;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .scanner-area.active {
+            border-color: #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        
+        .scanner-area.scanning {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .scanner-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            z-index: 2;
+        }
+        
+        .scanner-text {
+            font-size: 1.2rem;
+            text-align: center;
+            z-index: 2;
+            padding: 0 10px;
+        }
+        
+        .nfc-waves {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+        }
+        
+        .nfc-wave {
+            position: absolute;
+            border: 2px solid #2196F3;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: wave 2s infinite;
+        }
+        
+        .nfc-wave:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+        
+        .nfc-wave:nth-child(3) {
+            animation-delay: 1s;
+        }
+        
+        @keyframes wave {
+            0% {
+                width: 50px;
+                height: 50px;
+                opacity: 1;
+            }
+            100% {
+                width: 300px;
+                height: 300px;
+                opacity: 0;
+            }
+        }
+        
+        .camera-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+            border-radius: 8px;
+        }
+        
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .scanner-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nfc-btn {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .nfc-btn:hover {
+            background: #0b7dda;
+        }
+        
+        .nfc-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .nfc-btn.connected {
+            background: #4CAF50;
+        }
+        
+        .camera-btn {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .camera-btn:hover {
+            background: #e68900;
+        }
+        
+        .manual-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .manual-btn:hover {
+            background: #45a049;
+        }
+        
+        .input-section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        
+        label {
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        input {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .device-status {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .device-connected {
+            color: #4CAF50;
+        }
+        
+        .device-disconnected {
+            color: #f44336;
+        }
+        
+        .result-section {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+            color: #f44336;
+        }
+        
+        .info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 2px solid #2196F3;
+            color: #2196F3;
+        }
+        
+        .warning {
+            background: rgba(255, 152, 0, 0.2);
+            border: 2px solid #FF9800;
+            color: #FF9800;
+        }
+        
+        .badge-details {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .badge-details h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .badge-data {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        
+        .clear-history-btn {
+            background: #f44336;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-history-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .card-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        .card-type {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .scanning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            pointer-events: none;
+            z-index: 3;
+        }
+        
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #4CAF50;
+            top: 50%;
+            animation: scan 2s infinite;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+        
+        @keyframes scan {
+            0%, 100% { top: 20%; }
+            50% { top: 80%; }
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .scanner-area {
+                height: 250px;
+            }
+            
+            .scanner-icon {
+                font-size: 3rem;
+            }
+            
+            .scanner-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Universal Access Scanner</h1>
+            <p class="subtitle">Scan any access card, keyfob, or smart tag</p>
+        </header>
+        
+        <div class="nav-buttons">
+            <a href="cloud-database.html" class="nav-btn">View Cloud Database</a>
+            <a href="scanner.html" class="nav-btn">Back to Scanner</a>
+        </div>
+        
+        <div class="scanner-types">
+            <div class="scanner-type">
+                <span>📱</span> NFC Scanner
+            </div>
+            <div class="scanner-type">
+                <span>📷</span> Barcode/QR Scanner
+            </div>
+            <div class="scanner-type">
+                <span>⌨️</span> Manual Entry
+            </div>
+        </div>
+        
+        <div class="card-types">
+            <div class="card-type">HID Cards</div>
+            <div class="card-type">Key Fobs</div>
+            <div class="card-type">Smart Tags</div>
+            <div class="card-type">Bus Passes</div>
+            <div class="card-type">ID Badges</div>
+            <div class="card-type">Barcode Cards</div>
+            <div class="card-type">QR Codes</div>
+        </div>
+        
+        <div class="main-content">
+            <section class="scanner-section">
+                <div class="scanner-area" id="scannerArea">
+                    <div class="scanner-icon" id="scannerIcon">📱</div>
+                    <div class="scanner-text" id="scannerText">Start Scanner</div>
+                    <div class="nfc-waves" id="nfcWaves">
+                        <div class="nfc-wave"></div>
+                        <div class="nfc-wave"></div>
+                        <div class="nfc-wave"></div>
+                    </div>
+                    <video class="camera-preview" id="cameraPreview" autoplay playsinline></video>
+                    <canvas id="qrCanvas" style="display: none;"></canvas>
+                    <div class="scanning-overlay" id="scanningOverlay">
+                        <div class="scan-line"></div>
+                    </div>
+                </div>
+                
+                <div class="scanner-controls">
+                    <button class="scanner-btn nfc-btn" id="nfcBtn">NFC Scan</button>
+                    <button class="scanner-btn camera-btn" id="cameraBtn">Barcode/QR Scan</button>
+                    <button class="scanner-btn manual-btn" id="manualBtn">Manual Entry</button>
+                </div>
+                
+                <div class="device-status" id="deviceStatus">
+                    No external devices connected
+                </div>
+                
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="badgeInput">Enter card number manually:</label>
+                        <input type="text" id="badgeInput" placeholder="Enter card number">
+                    </div>
+                </div>
+                
+                <section class="result-section info" id="resultSection">
+                    Select a scanning method to begin
+                </section>
+                
+                <div class="badge-details" id="badgeDetails">
+                    <h3>Card Details:</h3>
+                    <div class="badge-data" id="badgeData"></div>
+                </div>
+            </section>
+            
+            <section class="history-section">
+                <h2>Scan History</h2>
+                <div class="history-list" id="historyList">
+                    <!-- History items will be added here dynamically -->
+                </div>
+                <button class="clear-history-btn" id="clearHistoryBtn">Clear History</button>
+            </section>
+        </div>
+        
+        <footer>
+            <p>Universal Access Scanner System | Dem Studios © 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Cloud Database URL (using localStorage as simulated cloud)
+        const CLOUD_DATABASE_KEY = 'cloudAccessDatabase';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const scannerArea = document.getElementById('scannerArea');
+            const scannerIcon = document.getElementById('scannerIcon');
+            const scannerText = document.getElementById('scannerText');
+            const nfcWaves = document.getElementById('nfcWaves');
+            const cameraPreview = document.getElementById('cameraPreview');
+            const nfcBtn = document.getElementById('nfcBtn');
+            const cameraBtn = document.getElementById('cameraBtn');
+            const manualBtn = document.getElementById('manualBtn');
+            const badgeInput = document.getElementById('badgeInput');
+            const resultSection = document.getElementById('resultSection');
+            const badgeDetails = document.getElementById('badgeDetails');
+            const badgeData = document.getElementById('badgeData');
+            const deviceStatus = document.getElementById('deviceStatus');
+            const historyList = document.getElementById('historyList');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            const qrCanvas = document.getElementById('qrCanvas');
+            const scanningOverlay = document.getElementById('scanningOverlay');
+            
+            let nfcAvailable = false;
+            let cameraAvailable = false;
+            let scanning = false;
+            let ndefReader = null;
+            let stream = null;
+            let currentMode = null;
+            let externalDeviceConnected = false;
+            let animationFrame = null;
+            let canvasContext = qrCanvas.getContext('2d');
+            
+            // Load scan history from localStorage
+            let scanHistory = JSON.parse(localStorage.getItem('accessScanHistory')) || [];
+            renderHistory();
+            
+            // Check device capabilities
+            checkCapabilities();
+            
+            // Setup comprehensive device detection
+            setupAdvancedDeviceDetection();
+            
+            // Function to check device capabilities
+            function checkCapabilities() {
+                // Check NFC
+                if ('NDEFReader' in window) {
+                    nfcAvailable = true;
+                    nfcBtn.disabled = false;
+                } else {
+                    nfcBtn.disabled = true;
+                }
+                
+                // Check camera
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    cameraAvailable = true;
+                    cameraBtn.disabled = false;
+                } else {
+                    cameraBtn.disabled = true;
+                }
+            }
+            
+            // Advanced device detection for ANY USB device
+            function setupAdvancedDeviceDetection() {
+                // Monitor for ANY device connection using multiple methods
+                
+                // Method 1: USB Device Detection
+                if (navigator.usb) {
+                    navigator.usb.addEventListener('connect', handleDeviceConnected);
+                    navigator.usb.addEventListener('disconnect', handleDeviceDisconnected);
+                    
+                    // Check initially connected devices
+                    navigator.usb.getDevices().then(devices => {
+                        if (devices.length > 0) {
+                            handleDeviceConnected();
+                        }
+                    });
+                }
+                
+                // Method 2: HID Device Detection
+                if (navigator.hid) {
+                    navigator.hid.addEventListener('connect', handleDeviceConnected);
+                    navigator.hid.addEventListener('disconnect', handleDeviceDisconnected);
+                    
+                    navigator.hid.getDevices().then(devices => {
+                        if (devices.length > 0) {
+                            handleDeviceConnected();
+                        }
+                    });
+                }
+                
+                // Method 3: Serial Device Detection
+                if (navigator.serial) {
+                    navigator.serial.addEventListener('connect', handleDeviceConnected);
+                    navigator.serial.addEventListener('disconnect', handleDeviceDisconnected);
+                }
+                
+                // Method 4: Generic device connection monitoring
+                window.addEventListener('deviceconnected', handleDeviceConnected);
+                window.addEventListener('devicedisconnected', handleDeviceDisconnected);
+                
+                // Method 5: Poll for device changes as fallback
+                setInterval(checkForDevices, 3000);
+            }
+            
+            function handleDeviceConnected() {
+                if (!externalDeviceConnected) {
+                    externalDeviceConnected = true;
+                    deviceStatus.innerHTML = `<span class="device-connected">✓ External device connected - NFC enabled</span>`;
+                    nfcBtn.classList.add('connected');
+                    nfcBtn.disabled = false;
+                    updateCloudDatabase('device_connected', 'External scanner device connected');
+                }
+            }
+            
+            function handleDeviceDisconnected() {
+                if (externalDeviceConnected) {
+                    externalDeviceConnected = false;
+                    deviceStatus.innerHTML = `<span class="device-disconnected">✗ External device disconnected</span>`;
+                    nfcBtn.classList.remove('connected');
+                    if (!nfcAvailable) {
+                        nfcBtn.disabled = true;
+                    }
+                    updateCloudDatabase('device_disconnected', 'External scanner device disconnected');
+                }
+            }
+            
+            // Fallback device detection
+            function checkForDevices() {
+                // This is a simulated check - in real implementation would use proper APIs
+                if (navigator.usb || navigator.hid || navigator.serial) {
+                    // If any device API is available, assume we can detect devices
+                    return;
+                }
+                
+                // Simulate device detection for demo purposes
+                if (Math.random() > 0.95 && !externalDeviceConnected) {
+                    handleDeviceConnected();
+                }
+            }
+            
+            // Function to update cloud database
+            function updateCloudDatabase(action, data) {
+                const cloudData = JSON.parse(localStorage.getItem(CLOUD_DATABASE_KEY)) || [];
+                const entry = {
+                    id: generateId(),
+                    action: action,
+                    data: data,
+                    timestamp: new Date().toISOString(),
+                    device: navigator.userAgent,
+                    location: 'Unknown'
+                };
+                
+                cloudData.unshift(entry);
+                
+                // Keep only last 1000 entries
+                if (cloudData.length > 1000) {
+                    cloudData.pop();
+                }
+                
+                localStorage.setItem(CLOUD_DATABASE_KEY, JSON.stringify(cloudData));
+            }
+            
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+            
+            // Function to validate card (all are accepted)
+            function validateCard(cardNumber) {
+                cardNumber = cardNumber.trim().toUpperCase();
+                
+                if (cardNumber) {
+                    // Determine card type
+                    let cardType = 'Unknown';
+                    if (cardNumber.startsWith('HID')) cardType = 'HID Card';
+                    else if (cardNumber.startsWith('SMART')) cardType = 'Smart Tag';
+                    else if (cardNumber.startsWith('BUS')) cardType = 'Bus Pass';
+                    else if (cardNumber.startsWith('KEY')) cardType = 'Key Fob';
+                    else if (cardNumber.startsWith('ID')) cardType = 'ID Badge';
+                    else if (cardNumber.includes('QR')) cardType = 'QR Code';
+                    else if (cardNumber.includes('BAR')) cardType = 'Barcode';
+                    else cardType = 'Access Card';
+                    
+                    return {
+                        valid: true,
+                        message: `ACCESS GRANTED: ${cardType} accepted`,
+                        data: {
+                            cardNumber: cardNumber,
+                            cardType: cardType,
+                            timestamp: new Date().toLocaleString(),
+                            status: 'Active',
+                            access: 'Granted',
+                            scanMethod: currentMode || 'manual'
+                        }
+                    };
+                } else {
+                    return {
+                        valid: false,
+                        message: 'Please enter a valid card number',
+                        data: null
+                    };
+                }
+            }
+            
+            // Function to add scan to history and cloud
+            function addToHistory(cardData) {
+                scanHistory.unshift(cardData);
+                
+                // Keep only last 20 scans
+                if (scanHistory.length > 20) {
+                    scanHistory = scanHistory.slice(0, 20);
+                }
+                
+                localStorage.setItem('accessScanHistory', JSON.stringify(scanHistory));
+                
+                // Update cloud database
+                updateCloudDatabase('card_scanned', cardData);
+                
+                renderHistory();
+            }
+            
+            // Function to render history
+            function renderHistory() {
+                historyList.innerHTML = '';
+                
+                if (scanHistory.length === 0) {
+                    historyList.innerHTML = '<div class="history-item">No scans yet</div>';
+                    return;
+                }
+                
+                scanHistory.forEach(scan => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.innerHTML = `
+                        <div>
+                            <div class="history-badge">${scan.cardNumber}</div>
+                            <div class="history-time">${scan.timestamp} - ${scan.cardType}</div>
+                        </div>
+                        <div style="color: #4CAF50;">✓</div>
+                    `;
+                    historyList.appendChild(historyItem);
+                });
+            }
+            
+            // Function to display result
+            function displayResult(validation) {
+                resultSection.textContent = validation.message;
+                
+                if (validation.valid) {
+                    resultSection.className = 'result-section success';
+                    scannerArea.classList.add('active');
+                    
+                    // Show card details
+                    badgeDetails.style.display = 'block';
+                    badgeData.innerHTML = `
+                        <div><strong>Card Number:</strong> ${validation.data.cardNumber}</div>
+                        <div><strong>Card Type:</strong> ${validation.data.cardType}</div>
+                        <div><strong>Scan Method:</strong> ${validation.data.scanMethod}</div>
+                        <div><strong>Status:</strong> ${validation.data.status}</div>
+                        <div><strong>Access:</strong> ${validation.data.access}</div>
+                        <div><strong>Time:</strong> ${validation.data.timestamp}</div>
+                    `;
+                    
+                    // Add to history
+                    addToHistory(validation.data);
+                    
+                    // Reset scanner UI after delay
+                    setTimeout(() => {
+                        scannerArea.classList.remove('active');
+                    }, 4000);
+                } else {
+                    resultSection.className = 'result-section error';
+                    
+                    // Add shake effect
+                    resultSection.style.animation = 'shake 0.5s';
+                    setTimeout(() => {
+                        resultSection.style.animation = '';
+                    }, 500);
+                }
+            }
+            
+            // Start NFC scanning
+            async function startNFCScan() {
+                // Check if we have NFC capability (built-in or external)
+                const hasNFCCapability = nfcAvailable || externalDeviceConnected;
+                
+                if (!hasNFCCapability) {
+                    resultSection.textContent = "No NFC capability detected. Connect an external device.";
+                    resultSection.className = 'result-section error';
+                    return;
+                }
+                
+                if (scanning) {
+                    await stopScanning();
+                    return;
+                }
+                
+                // Set NFC mode
+                currentMode = 'nfc';
+                scanning = true;
+                scannerArea.classList.add('scanning');
+                nfcWaves.style.opacity = '1';
+                scannerIcon.textContent = '📱';
+                scannerText.textContent = externalDeviceConnected ? 
+                    'Scanning with External Device...' : 
+                    'Scanning NFC - Tap Card Now';
+                resultSection.textContent = "Ready for NFC scan...";
+                resultSection.className = 'result-section info';
+                
+                // If we have external device but no built-in NFC, simulate scanning
+                if (externalDeviceConnected && !nfcAvailable) {
+                    resultSection.textContent = "External device ready - simulating scan";
+                    // In real implementation, interface with external device API
+                    setTimeout(() => {
+                        const simulatedCard = generateSimulatedCardNumber();
+                        const validation = validateCard(simulatedCard);
+                        displayResult(validation);
+                        badgeInput.value = simulatedCard;
+                        stopScanning();
+                    }, 1500);
+                    return;
+                }
+                
+                // Use built-in NFC
+                try {
+                    ndefReader = new NDEFReader();
+                    await ndefReader.scan();
+                    
+                    ndefReader.addEventListener("readingerror", () => {
+                        resultSection.textContent = "NFC read error. Please try again.";
+                        resultSection.className = 'result-section error';
+                    });
+                    
+                    ndefReader.addEventListener("reading", async ({ message, serialNumber }) => {
+                        let cardNumber = "";
+                        
+                        // Extract data from NFC message
+                        if (message.records && message.records.length > 0) {
+                            for (const record of message.records) {
+                                const textDecoder = new TextDecoder();
+                                
+                                if (record.recordType === "text") {
+                                    cardNumber = textDecoder.decode(record.data);
+                                    break;
+                                } else if (record.recordType === "mime" && record.mediaType === "text/plain") {
+                                    cardNumber = textDecoder.decode(record.data);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // If no data found, use serial number
+                        if (!cardNumber && serialNumber) {
+                            cardNumber = 'NFC-' + serialNumber;
+                        } else if (!cardNumber) {
+                            cardNumber = generateSimulatedCardNumber();
+                        }
+                        
+                        // Validate the card
+                        const validation = validateCard(cardNumber);
+                        displayResult(validation);
+                        
+                        // Update input field
+                        badgeInput.value = cardNumber;
+                        
+                        // Stop scanning
+                        await stopScanning();
+                    });
+                } catch (error) {
+                    console.error("NFC Scan Error:", error);
+                    resultSection.textContent = "NFC Error: " + error.message;
+                    resultSection.className = 'result-section error';
+                    await stopScanning();
+                }
+            }
+            
+            // Generate simulated card number for external devices
+            function generateSimulatedCardNumber() {
+                const prefixes = ['HID', 'SMART', 'BUS', 'KEY', 'ID', 'EXT', 'USB'];
+                const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+                const randomNum = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                return prefix + randomNum;
+            }
+            
+            // Start camera scanning for barcodes/QR codes
+            async function startCameraScan() {
+                if (!cameraAvailable) {
+                    resultSection.textContent = "Camera is not available on this device.";
+                    resultSection.className = 'result-section error';
+                    return;
+                }
+                
+                if (scanning) {
+                    await stopScanning();
+                    return;
+                }
+                
+                // Set camera mode
+                currentMode = 'camera';
+                scanning = true;
+                scannerArea.classList.add('scanning');
+                scannerIcon.style.display = 'none';
+                cameraPreview.style.display = 'block';
+                scanningOverlay.style.display = 'block';
+                scannerText.textContent = 'Position barcode/QR code in view';
+                resultSection.textContent = "Scanning for barcodes/QR codes...";
+                resultSection.className = 'result-section info';
+                
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } 
+                    });
+                    cameraPreview.srcObject = stream;
+                    
+                    // Set up canvas for QR code detection
+                    qrCanvas.width = cameraPreview.videoWidth;
+                    qrCanvas.height = cameraPreview.videoHeight;
+                    
+                    // Start QR code detection
+                    scanForCodes();
+                    
+                } catch (error) {
+                    console.error("Camera Error:", error);
+                    resultSection.textContent = "Camera Error: " + error.message;
+                    resultSection.className = 'result-section error';
+                    await stopScanning();
+                }
+            }
+            
+            // Function to scan for QR codes and barcodes
+            function scanForCodes() {
+                if (!scanning || !stream) return;
+                
+                if (cameraPreview.readyState === cameraPreview.HAVE_ENOUGH_DATA) {
+                    canvasContext.drawImage(cameraPreview, 0, 0, qrCanvas.width, qrCanvas.height);
+                    const imageData = canvasContext.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+                    
+                    // Try QR code detection first
+                    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+                    
+                    if (qrCode) {
+                        // Found a QR code!
+                        const cardNumber = qrCode.data;
+                        const validation = validateCard(cardNumber);
+                        displayResult(validation);
+                        badgeInput.value = cardNumber;
+                        stopScanning();
+                        return;
+                    }
+                    
+                    // Try barcode detection (simulated for demo)
+                    // In real implementation, use Quagga or similar library
+                    detectSimulatedBarcode(imageData);
+                }
+                
+                // Continue scanning
+                animationFrame = requestAnimationFrame(scanForCodes);
+            }
+            
+            // Simulated barcode detection for demo
+            function detectSimulatedBarcode(imageData) {
+                // This is a simplified simulation - real implementation would use proper barcode library
+                // Check for specific patterns that might indicate a barcode
+                const data = imageData.data;
+                let contrast = 0;
+                
+                // Simple contrast check (real barcodes have high contrast)
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+                    if (brightness < 128) contrast++;
+                }
+                
+                // If high contrast and scanning for a while, simulate barcode detection
+                if (contrast > (data.length / 4) * 0.3 && Math.random() > 0.98) {
+                    const barcodeNumber = 'BAR' + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                    const validation = validateCard(barcodeNumber);
+                    displayResult(validation);
+                    badgeInput.value = barcodeNumber;
+                    stopScanning();
+                }
+            }
+            
+            // Stop all scanning
+            async function stopScanning() {
+                scanning = false;
+                scannerArea.classList.remove('scanning');
+                nfcWaves.style.opacity = '0';
+                scannerIcon.style.display = 'block';
+                cameraPreview.style.display = 'none';
+                scanningOverlay.style.display = 'none';
+                scannerText.textContent = 'Start Scanner';
+                scannerIcon.textContent = '📱';
+                
+                // Stop NFC
+                if (ndefReader) {
+                    try {
+                        if (typeof ndefReader.stop === 'function') {
+                            await ndefReader.stop();
+                        }
+                    } catch (e) {
+                        console.log("Error stopping NFC reader:", e);
+                    }
+                    ndefReader = null;
+                }
+                
+                // Stop camera
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                
+                // Stop QR scanning
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                }
+                
+                currentMode = null;
+            }
+            
+            // Manual entry
+            function handleManualEntry() {
+                const cardNumber = badgeInput.value.trim();
+                
+                if (!cardNumber) {
+                    resultSection.textContent = 'Please enter a card number';
+                    resultSection.className = 'result-section error';
+                    return;
+                }
+                
+                const validation = validateCard(cardNumber);
+                displayResult(validation);
+            }
+            
+            // Event listeners
+            nfcBtn.addEventListener('click', startNFCScan);
+            cameraBtn.addEventListener('click', startCameraScan);
+            manualBtn.addEventListener('click', handleManualEntry);
+            
+            // Allow pressing Enter for manual entry
+            badgeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleManualEntry();
+                }
+            });
+            
+            // Clear history
+            clearHistoryBtn.addEventListener('click', function() {
+                scanHistory = [];
+                localStorage.setItem('accessScanHistory', JSON.stringify(scanHistory));
+                renderHistory();
+            });
+            
+            // Scanner area click - start last used mode or NFC by default
+            scannerArea.addEventListener('click', function() {
+                if (scanning) {
+                    stopScanning();
+                } else {
+                    if (currentMode === 'camera') {
+                        startCameraScan();
+                    } else {
+                        startNFCScan();
+                    }
+                }
+            });
+            
+            // Add shake animation for errors
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                    20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>
